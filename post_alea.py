@@ -28,15 +28,15 @@ class PostAlea:
     
     # header values in array for each of changing order
     # coverages m1:p2:p1:m2
-    _headerFields = ['event_ID', 'TE_location', 'gene_location',
+    _headerFields = ['event_ID', 'UCSC_gene', 'TE_location', 'gene_location',
                      'distance', 'ratio', 'coverage_total', 'coverages']
     
     # fileNameStorage
-    _geneBedFileName = ""
     _te1FileName = ""
     _te2FileName = ""
     
     _geneList = {}
+    _geneNames = {}
     
     # filtering and search variables
     _coverageThreshold = 0
@@ -45,12 +45,40 @@ class PostAlea:
     """
     Constructor
     """
-    def __init__(self, geneBed, te1, te2, windowSize, coverageThreshold):
-        self._geneBedFileName = geneBed
+    def __init__(self, gene, te1, te2, windowSize, coverageThreshold):
         self._te1FileName = te1
         self._te2FileName = te2
         self._windowSize = windowSize
         self._coverageThreshold = coverageThreshold
+        self._geneNames = self._getGeneNames(gene)
+    
+    """
+    Extracts the USCS gene IDs for each refseqID for later lookup
+    Uses a refFlat file of refseq genes
+    """
+    def _getGeneNames(self, refFlat):
+        
+        geneNames = {}
+        
+        fh = open(refFlat)
+        
+        headerArray = fh.readline().split("\t")
+        
+        # get header indexes
+        indexRefSeqName = -1
+        indexGeneName2 = -1
+        
+        for i in range(len(headerArray)):
+            if headerArray[i] == "name":
+                indexRefSeqName = i
+            if headerArray[i] == "name2":
+                indexGeneName2 = i
+        
+        for i in fh:
+            lineHeader = i.split("\t")
+            geneNames[lineHeader[indexRefSeqName]] = lineHeader[indexGeneName2]
+        
+        return geneNames
     
     """
     Starts the analysis
@@ -60,29 +88,14 @@ class PostAlea:
         
         # make filehandles for each file
         fh_m1 = open(m1)
-        fh_p2 = open(p2)
-        fh_p1 = open(p1)
-        fh_m2 = open(m2)
-               
+
         # create GeneInfo objects
-        for i in fh_m1:
-            
-            # first lines of file (m1 is use used as for loop iterator)
-            line_m1 = i.strip()
-            line_p2 = fh_p2.readline().strip()
-            line_p1 = fh_p1.readline().strip()
-            line_m2 = fh_m2.readline().strip()
-            
-            # @todo: add check to make sure all 4 files are synced to correct gene
-            
+        for i in fh_m1:            
             # break line into array
-            lineArray_m1 = line_m1.split("\t")
-            lineArray_p2 = line_p2.split("\t")
-            lineArray_p1 = line_p1.split("\t")
-            lineArray_m2 = line_m2.split("\t")
+            lineArray = i.strip().split("\t")
             
-            currentGeneID = lineArray_m1[3]
-            currentChr = lineArray_m1[0]
+            currentGeneID = lineArray[3]
+            currentChr = lineArray[0]
 
             # add gene to list if it does not yet exist            
             if not self._geneList.has_key(currentGeneID):
@@ -90,17 +103,71 @@ class PostAlea:
                 self._geneList[currentGeneID] = geneInfoObj
 
             # populate exon list
-            currentStart = lineArray_m1[1]
-            currentEnd = lineArray_m1[2]
-            
-            self._geneList[currentGeneID].addExon(currentStart, currentEnd,
-                                                  lineArray_m1[5], lineArray_p2[5],
-                                                  lineArray_p1[5], lineArray_m2[5])
-                                                  
-        # close file handles
+            currentStart = lineArray[1]
+            currentEnd = lineArray[2] 
+            self._geneList[currentGeneID].addUpdateExon(currentStart, currentEnd,
+                                                        lineArray[5], 0, 0, 0)
+        # close file handle
         fh_m1.close()
+        
+        fh_p2 = open(p2)
+        for i in fh_p2:
+            # break line into array
+            lineArray = i.strip().split("	")
+            
+            currentGeneID = lineArray[3]
+            currentChr = lineArray[0]
+
+            # add gene to list if it does not yet exist            
+            if not self._geneList.has_key(currentGeneID):
+                geneInfoObj = GeneInfo(currentGeneID, currentChr)
+                self._geneList[currentGeneID] = geneInfoObj
+
+            # populate exon list
+            currentStart = lineArray[1]
+            currentEnd = lineArray[2] 
+            self._geneList[currentGeneID].addUpdateExon(currentStart, currentEnd,
+                                                        0, lineArray[5], 0, 0)
         fh_p2.close()
+ 
+        fh_p1 = open(p2)
+        for i in fh_p1:
+            # break line into array
+            lineArray = i.strip().split("\t")
+            
+            currentGeneID = lineArray[3]
+            currentChr = lineArray[0]
+
+            # add gene to list if it does not yet exist            
+            if not self._geneList.has_key(currentGeneID):
+                geneInfoObj = GeneInfo(currentGeneID, currentChr)
+                self._geneList[currentGeneID] = geneInfoObj
+
+            # populate exon list
+            currentStart = lineArray[1]
+            currentEnd = lineArray[2] 
+            self._geneList[currentGeneID].addUpdateExon(currentStart, currentEnd,
+                                                        0, 0, lineArray[5], 0)
         fh_p1.close()
+        
+        fh_m2 = open(m2)
+        for i in fh_m2:
+            # break line into array
+            lineArray = i.strip().split("\t")
+            
+            currentGeneID = lineArray[3]
+            currentChr = lineArray[0]
+
+            # add gene to list if it does not yet exist            
+            if not self._geneList.has_key(currentGeneID):
+                geneInfoObj = GeneInfo(currentGeneID, currentChr)
+                self._geneList[currentGeneID] = geneInfoObj
+
+            # populate exon list
+            currentStart = lineArray[1]
+            currentEnd = lineArray[2] 
+            self._geneList[currentGeneID].addUpdateExon(currentStart, currentEnd,
+                                                        0, 0, 0, lineArray[5])
         fh_m2.close()
 
         strain1_TEs = track.load(self._te1FileName)
@@ -111,7 +178,7 @@ class PostAlea:
         # eventID->fields->values
         events = {}
         
-        #eventsFiltered = {}
+        # eventsFiltered = {}
 
         # genes with any evidence of allelic skew
         # look for TEs
@@ -142,6 +209,7 @@ class PostAlea:
                     eventHash["ratio"] = ratio
                     eventHash["coverage_total"] = coverageTotal
                     eventHash["coverages"] = coverages
+                    eventHash["UCSC_gene"] = self._geneNames[gene.getGeneID()]
                     
                     events[eventID] = eventHash
                 
@@ -162,6 +230,7 @@ class PostAlea:
                     eventHash["ratio"] = ratio
                     eventHash["coverage_total"] = coverageTotal
                     eventHash["coverages"] = coverages
+                    eventHash["UCSC_gene"] = self._geneNames[gene.getGeneID()]
                     
                     events[eventID] = eventHash                
         
@@ -176,8 +245,8 @@ class PostAlea:
         out_fh.close()
         
         # output file for filtered events
-        #out_filtered_fh = open(outputPrefix + 'filtered.tsv', 'w')
-        #out_filtered_fh.close()
+        # out_filtered_fh = open(outputPrefix + 'filtered.tsv', 'w')
+        # out_filtered_fh.close()
     
     """
     Helper method
@@ -203,8 +272,8 @@ class PostAlea:
 
 if __name__ == '__main__':
     parser = OptionParser()
-    parser.add_option("-g", "--gene", dest="geneBED",
-                      help="bed file of gene annotations (Required)", metavar="GENEBED")
+    parser.add_option("-g", "--gene", dest="gene",
+                      help="refFlat file of gene annotations (Required)", metavar="GENEBED")
     parser.add_option("-1", "--strain1_TE", dest="te1", metavar="TE1",
                       help="bed file of Transposible Elements (TE) for strain1 (Required)")
     parser.add_option("-2", "--strain2_TE", dest="te2", metavar="TE2",
@@ -230,9 +299,9 @@ if __name__ == '__main__':
 
     (options, args) = parser.parse_args()
     
-    if (options.geneBED and options.te1 and options.te2 
+    if (options.gene and options.te1 and options.te2 
         and options.m1 and options.p2 and options.p1 and options.m2):
-        runner = PostAlea(options.geneBED, options.te1, options.te2,
+        runner = PostAlea(options.gene, options.te1, options.te2,
                           options.windowSize, options.coverageThreshold)
         runner.run(options.m1, options.p2, options.p1, options.m2, options.outputPrefix)
     else:

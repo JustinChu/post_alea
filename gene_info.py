@@ -10,6 +10,8 @@ Stores information regarding:
 @author: cjustin
 '''
 
+from exon_info import ExonInfo
+
 class GeneInfo:
     
     _geneID = ""
@@ -20,12 +22,7 @@ class GeneInfo:
     _end = 0
     
     # Exon information
-    _exonStart = []
-    _exonEnd = []
-    _exonCov_m1 = []
-    _exonCov_p2 = []
-    _exonCov_p1 = []
-    _exonCov_m2 = []
+    _exonHash = {}
     
     """
     Constructor
@@ -35,33 +32,38 @@ class GeneInfo:
         self._chr = chr
         self._totalBases = 0
         self._totalCov = 0
-        self._exonStart = []
-        self._exonEnd = []
-        self._exonCov_m1 = []
-        self._exonCov_p2 = []
-        self._exonCov_p1 = []
-        self._exonCov_m2 = []
+        self._exonHash = {}
         self._start = 'Inf'
         self._end = 0
 
-    
     """
-    Adds a single exon geneInfo object
+    Adds or updates a single exon geneInfo object
     Exon information consists of coverage and location information
-    """
-    def addExon(self, start, end, m1, p2, p1, m2):
-        self._exonStart.append(int(start))
-        self._exonEnd.append(int(end))
-        self._exonCov_m1.append(float(m1))
-        self._exonCov_p2.append(float(p2))
-        self._exonCov_p1.append(float(p1)) 
-        self._exonCov_m2.append(float(m2))
-        self._totalBases += int(end) - int(start)
-        if int(start) < self._start:
-            self._start = int(start)
-        if int(end) > self._end:
-            self._end = int(end)
+    
+    Coverages in each update will be overwritten if the new coverage is
+    greater than 0
+    """         
+    def addUpdateExon(self, start, end, m1, p2, p1, m2):
         
+        exonID = start + "_" + end
+        
+        if not self._exonHash.has_key(exonID):
+            self._exonHash[exonID] = ExonInfo(start, end)
+            if int(start) < self._start:
+                self._start = int(start)
+            if int(end) > self._end:
+                self._end = int(end)
+            self._totalBases += int(end) - int(start)
+        
+        if m1 != 0 :
+            self._exonHash[exonID].setCoverage_m1(m1)
+        if p2 != 0 :
+            self._exonHash[exonID].setCoverage_p2(p2)
+        if p1 != 0 :
+            self._exonHash[exonID].setCoverage_p1(p1)
+        if m2 != 0 :
+            self._exonHash[exonID].setCoverage_m2(m2)
+                
     def getGeneID(self):
         return self._geneID
     
@@ -81,13 +83,11 @@ class GeneInfo:
     def getCoverage(self):
         cov = 0
         
-        for i in range(len(self._exonStart)):
+        for i in self._exonHash.keys():
             # proportion of gene exon is responsible for
-            geneProportion = (self._exonEnd[i] - self._exonStart[i]) / self._totalBases
-            cov += (self._exonCov_m1[i]) * geneProportion
+            geneProportion = (self._exonHash[i].getEnd() - self._exonHash[i].getStart()) / self._totalBases
+            cov += (self._exonHash[i].getCoverage_m1()) * geneProportion
         return cov  
-    
-    
     
     """
     Returns normalized coverage of gene for all exons for m1
@@ -95,10 +95,10 @@ class GeneInfo:
     def getCoverage_m1(self):
         cov = 0
         
-        for i in range(len(self._exonStart)):
+        for i in self._exonHash.keys():
             # proportion of gene exon is responsible for
-            geneProportion = (self._exonEnd[i] - self._exonStart[i]) / self._totalBases
-            cov += self._exonCov_m1[i] * geneProportion
+            geneProportion = (self._exonHash[i].getEnd() - self._exonHash[i].getStart()) / self._totalBases
+            cov += self._exonHash[i].getCoverage_m1() * geneProportion
         return cov
     
     """
@@ -107,10 +107,10 @@ class GeneInfo:
     def getCoverage_p2(self):
         cov = 0
         
-        for i in range(len(self._exonStart)):
+        for i in self._exonHash.keys():
             # proportion of gene exon is responsible for
-            geneProportion = (self._exonEnd[i] - self._exonStart[i]) / self._totalBases
-            cov += self._exonCov_p2[i] * geneProportion
+            geneProportion = (self._exonHash[i].getEnd() - self._exonHash[i].getStart()) / self._totalBases
+            cov += self._exonHash[i].getCoverage_p2() * geneProportion
         return cov
 
     """
@@ -119,10 +119,11 @@ class GeneInfo:
     def getCoverage_p1(self):
         cov = 0
         
-        for i in range(len(self._exonStart)):
+        for i in self._exonHash.keys():
             # proportion of gene exon is responsible for
-            geneProportion = (self._exonEnd[i] - self._exonStart[i]) / self._totalBases
-            cov += self._exonCov_p1[i] * geneProportion
+            geneProportion = (self._exonHash[i].getEnd() - 
+                              self._exonHash[i].getStart()) / self._totalBases
+            cov += self._exonHash[i].getCoverage_p1() * geneProportion
         return cov
 
     """
@@ -131,10 +132,11 @@ class GeneInfo:
     def getCoverage_m2(self):
         cov = 0
         
-        for i in range(len(self._exonStart)):
+        for i in self._exonHash.keys():
             # proportion of gene exon is responsible for
-            geneProportion = (self._exonEnd[i] - self._exonStart[i]) / self._totalBases
-            cov += self._exonCov_m2[i] * geneProportion
+            geneProportion = (self._exonHash[i].getEnd() - 
+                              self._exonHash[i].getStart()) / self._totalBases
+            cov += self._exonHash[i].getCoverage_m2() * geneProportion
         return cov
     
     def getSummarizedCoveragesStr(self):
@@ -146,10 +148,12 @@ class GeneInfo:
     """
     def getCoverageStrain1(self):
         cov = 0
-        for i in range(len(self._exonStart)):
+        for i in self._exonHash.keys():
             # proportion of gene exon is responsible for
-            geneProportion = (self._exonEnd[i] - self._exonStart[i]) / self._totalBases
-            cov += (self._exonCov_m1[i] + self._exonCov_p1[i]) * geneProportion
+            geneProportion = (self._exonHash[i].getEnd() - 
+                              self._exonHash[i].getStart()) / self._totalBases
+            cov += (self._exonHash[i].getCoverage_m1() + 
+                    self._exonHash[i].getCoverage_p1()) * geneProportion
         return cov    
     
     """
@@ -157,10 +161,12 @@ class GeneInfo:
     """
     def getCoverageStrain2(self):
         cov = 0
-        for i in range(len(self._exonStart)):
+        for i in self._exonHash.keys():
             # proportion of gene exon is responsible for
-            geneProportion = (self._exonEnd[i] - self._exonStart[i]) / self._totalBases
-            cov += (self._exonCov_m2[i] + self._exonCov_p2[i]) * geneProportion
+            geneProportion = (self._exonHash[i].getEnd() - 
+                              self._exonHash[i].getStart()) / self._totalBases
+            cov += (self._exonHash[i].getCoverage_m2() + 
+                    self._exonHash[i].getCoverage_p2()) * geneProportion
         return cov 
         
     """
@@ -192,11 +198,14 @@ class GeneInfo:
         covStrain1 = 0
         covStrain2 = 0
         
-        for i in range(len(self._exonStart)):
+        for i in self._exonHash.keys():
             # proportion of gene exon is responsible for
-            geneProportion = (self._exonEnd[i] - self._exonStart[i]) / self._totalBases
-            covStrain1 += (self._exonCov_m1[i] + self._exonCov_m2[i]) * geneProportion
-            covStrain2 += (self._exonCov_p1[i] + self._exonCov_p2[i]) * geneProportion
+            geneProportion = (self._exonHash[i].getEnd() - 
+                              self._exonHash[i].getStart()) / self._totalBases
+            covStrain1 += (self._exonHash[i].getCoverage_m1() + 
+                           self._exonHash[i].getCoverage_m2()) * geneProportion
+            covStrain2 += (self._exonHash[i].getCoverage_p1() + 
+                           self._exonHash[i].getCoverage_p2()) * geneProportion
         
         if covStrain1 != 0 and covStrain2 != 0:
             return covStrain1 / (covStrain1 + covStrain2)
