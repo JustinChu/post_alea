@@ -28,8 +28,8 @@ class PostAlea:
     
     # header values in array for each of changing order
     # coverages m1:p2:p1:m2
-    _headerFields = ['event_ID', 'UCSC_gene', 'TE_location', 'gene_location',
-                     'distance', 'ratio', 'coverage_total', 'coverages']
+    _headerFields = ['event_ID', 'TE_name', 'UCSC_gene', 'TE_location', 'gene_location',
+                     'distance', 'ratio', 'coverage_total', 'coverages', 'exon_info']
     
     # fileNameStorage
     _te1FileName = ""
@@ -203,6 +203,7 @@ class PostAlea:
                     eventID = gene.getGeneID() + "_" + str(eventStart) + "_" + eventType
                     
                     eventHash["event_ID"] = eventID
+                    eventHash["TE_name"] = eventType
                     eventHash["TE_location"] = gene.getChr() + ":" + str(eventStart) + "-" + str(eventEnd)
                     eventHash["gene_location"] = gene.getChr() + ":" + str(gene.getStart()) + "-" + str(gene.getEnd())
                     eventHash["distance"] = eventStart - gene.getStart()
@@ -210,6 +211,7 @@ class PostAlea:
                     eventHash["coverage_total"] = coverageTotal
                     eventHash["coverages"] = coverages
                     eventHash["UCSC_gene"] = self._geneNames[gene.getGeneID()]
+                    eventHash["exon_info"] = self._geneNames[gene.getExonInfo()]
                     
                     events[eventID] = eventHash
                 
@@ -224,6 +226,7 @@ class PostAlea:
                     eventID = gene.getGeneID() + "_" + str(eventStart) + "_" + eventType
                     
                     eventHash["event_ID"] = eventID
+                    eventHash["TE_name"] = eventType
                     eventHash["TE_location"] = gene.getChr() + ":" + str(eventStart) + "-" + str(eventEnd)
                     eventHash["gene_location"] = gene.getChr() + ":" + str(gene.getStart()) + "-" + str(gene.getEnd())
                     eventHash["distance"] = gene.getStart() - eventStart
@@ -231,6 +234,7 @@ class PostAlea:
                     eventHash["coverage_total"] = coverageTotal
                     eventHash["coverages"] = coverages
                     eventHash["UCSC_gene"] = self._geneNames[gene.getGeneID()]
+                    eventHash["exon_info"] = self._geneNames[gene.getExonInfo()]
                     
                     events[eventID] = eventHash                
         
@@ -291,12 +295,11 @@ if __name__ == '__main__':
                       help="coverage threshold needed evaluate event")
     parser.add_option("-w", "--window_size", dest="windowSize",
                       metavar="WINDOW_SIZE", default=20000,
-                      help="distance from gene to consider transposible elements")
+                      help="distance from gene to consider transposable elements")
     parser.add_option("-o", "--output_prefix", dest="outputPrefix",
                       metavar="WINDOW_SIZE", default="output",
                       help="output Prefix to output files in")
     
-
     (options, args) = parser.parse_args()
     
     if (options.gene and options.te1 and options.te2 
