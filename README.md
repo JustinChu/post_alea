@@ -4,7 +4,7 @@ Running this application
 Requirements:
 * [track](https://github.com/xapple/track)
 
-For each input bed file you need to process it first using Misha Bilinky's tool for computing region coverage:
+For each input bed file you need to process it first using Misha Bilenky's tool for computing region coverage:
 
 ```
 java -jar RegionsCoverageFromBEDCalculator.jar \
