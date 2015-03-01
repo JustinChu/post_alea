@@ -2,7 +2,7 @@ Running this application
 ====================
 
 Requirements:
-* [bbcflib](http://github.com/bbcf/bbcflib)
+* [track](https://github.com/xapple/track)
 
 For each input bed file you need to process it first using Misha Bilinky's tool for computing region coverage:
 
